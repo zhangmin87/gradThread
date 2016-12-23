@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- 基于Cache的SSO过滤器 -->
+    <bean id="ssoCacheFilter" class="sso.client.filter.ClientSsoCacheBasedFilter">
+        <!-- 配置用户缓存 -->
+        <property name="serviceCache" ref="userCache"/>
+        <property name="ssoMetaData">
+            <bean class="sso.config.DefaultSsoMetaData">
+                <property name="localSsoProperties">
+                    <bean class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+                        <property name="location" value="classpath:env/${DEPLOY_ENV}/SsoConfig.properties"/>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+        <property name="excludeUrls">
+            <set>
+                <value>/ceb/openapi/**</value>
+                <value>/ceb/api/**</value>
+                <value>/ceb/js/**</value>
+                <value>/ceb/css/**</value>
+                <value>/ceb/images/**</value>
+                <value>/ceb/Tester.html</value>
+            </set>
+        </property>
+    </bean>
+</beans>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- Quartz计划 -->
+    <bean id="startQuartz" class="org.springframework.scheduling.quartz.SchedulerFactoryBean" lazy-init="false">
+        <property name="triggers">
+            <list>
+                <ref bean="EasipassJobTrigger" />
+            </list>
+        </property>
+    </bean>
+    <!-- Quartz触发器 -->
+    <bean id="EasipassJobTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="jobDetail" ref="EasipassJob" />
+        <property name="startDelay" value="3000" />
+        <property name="cronExpression" value="0 */1 * * * ?" />
+    </bean>
+    <!-- 亿通任务 -->
+    <bean id="EasipassJob"
+          class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+        <property name="targetObject" ref="EasipassFTPDownloader"/>
+        <property name="targetMethod" value="download" />
+    </bean>
+    <bean id="EasipassFTPDownloader" class="com.ceair.ceb.job.MultipleFTPDownloader">
+        <property name="downloaders">
+            <list>
+                <!-- FTP接收上海进港国检舱单回执-->
+                <bean class="com.ceair.ceb.job.easipass.GJManifestDeclarationAckFTPDownloader">
+                    <property name="encoding" value="UTF-8"/>
+                    <property name="ftpOperation" ref="EasipassFtpOperation"/>
+                    <property name="workingDirectory" value="/GJManifest/DHWL/recv/"/>
+                </bean>
+                <!-- FTP接收上海进港报单单回执-->
+                <bean class="com.ceair.ceb.job.easipass.GJCustomsDeclarationAckFTPDownloader">
+                    <property name="encoding" value="UTF-8"/>
+                    <property name="ftpOperation" ref="EasipassFtpOperation"/>
+                    <property name="workingDirectory" value="/CustomsDeclaration/DHWL/recv/"/>
+                </bean>
+                <!-- FTP接收上海进港快件预报回执-->
+                <bean class="com.ceair.ceb.job.easipass.ExpressDeclarationAckFTPDownloader">
+                    <property name="encoding" value="GBK"/>
+                    <property name="ftpOperation" ref="EasipassFtpOperation"/>
+                    <property name="workingDirectory" value="/Express/DHWL/recv/"/>
+                </bean>
+                <!-- 亿心FTP接收商品订单（适配CBB） -->
+                <bean class="com.ceair.ceb.job.cbbadapter.CBBOrderFTPDownloader">
+                    <property name="ftpOperation" ref="YellsunFtpOperation"/>
+                    <property name="workingDirectory" value="/recv/"/>
+                    <property name="declareCocode" value="YELLSUN"/>
+                    <property name="requestUrl" value="${remote.ceb.message.recv.url}"/>
+                </bean>
+            </list>
+        </property>
+    </bean>
+    <!-- Easipass FTP-->
+    <bean id="EasipassFtpOperation" class="framework.net.ftp.apache.ApacheFtpOperation" scope="prototype" lazy-init="true">
+        <constructor-arg>
+            <props>
+                <prop key="framework.net.ftp.hostname">${ftp.easipass.host}</prop>
+                <prop key="framework.net.ftp.port">${ftp.easipass.port}</prop>
+                <prop key="framework.net.ftp.username">${ftp.easipass.username}</prop>
+                <prop key="framework.net.ftp.password">${ftp.easipass.password}</prop>
+            </props>
+        </constructor-arg>
+    </bean>
+    <!-- Yellsun FTP-->
+    <bean id="YellsunFtpOperation" class="framework.net.ftp.apache.ApacheFtpOperation" scope="prototype" lazy-init="true">
+        <constructor-arg>
+            <props>
+                <prop key="framework.net.ftp.hostname">${ftp.easipass.host}</prop>
+                <prop key="framework.net.ftp.port">${ftp.easipass.port}</prop>
+                <prop key="framework.net.ftp.username">${ftp.easipass.username}</prop>
+                <prop key="framework.net.ftp.password">${ftp.easipass.password}</prop>
+            </props>
+        </constructor-arg>
+    </bean>
+</beans>

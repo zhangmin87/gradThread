@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd">
+
+    <!-- 加载属性文件 -->
+    <context:property-placeholder location="classpath:env/${DEPLOY_ENV}/*.properties"/>
+
+    <!-- 导入其他配置 -->
+    <import resource="spring-database.xml"/>
+    <import resource="spring-cache.xml"/>
+    <import resource="spring-filter.xml"/>
+    <!--<import resource="spring-jms.xml"/>-->
+    <!--<import resource="spring-quartz.xml"/>-->
+    <import resource="spring-monitor.xml"/>
+
+    <!-- 扫描组件 -->
+    <context:component-scan base-package="com.ceair.ceb">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+    <!-- 向ApplicationContext注入MessageSource -->
+    <bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">
+        <property name="basename" value="i18n.message"></property>
+    </bean>
+
+    <!-- 一个RestTemplate-->
+    <bean id="requestFactory" class="org.springframework.http.client.SimpleClientHttpRequestFactory">
+        <property name="readTimeout" value="15000"/>
+        <property name="connectTimeout" value="5000"/>
+    </bean>
+    <bean id="restTemplate" class="org.springframework.web.client.RestTemplate">
+        <constructor-arg ref="requestFactory"></constructor-arg>
+    </bean>
+
+    <!-- 一个线程池 -->
+    <bean id="scheduledExecutorService" class="org.springframework.scheduling.concurrent.ScheduledExecutorFactoryBean">
+        <property name="poolSize" value="20" />
+    </bean>
+
+    <!-- 一个JSONMapper -->
+    <bean id="jackson2JsonMapper" class="com.ceair.framework.json.jackson2.Jackson2JsonMapper"/>
+
+    <!-- Easipass FTP-->
+    <bean id="ftpOperation" class="framework.net.ftp.apache.ApacheFtpOperation" scope="prototype" lazy-init="true">
+        <constructor-arg>
+            <props>
+                <prop key="framework.net.ftp.hostname">${ftp.easipass.host}</prop>
+                <prop key="framework.net.ftp.port">${ftp.easipass.port}</prop>
+                <prop key="framework.net.ftp.username">${ftp.easipass.username}</prop>
+                <prop key="framework.net.ftp.password">${ftp.easipass.password}</prop>
+            </props>
+        </constructor-arg>
+    </bean>
+
+    <!-- CBT舱单备案 -->
+    <bean id="manifestMessageHandler" class="com.ceair.ceb.messaging.handler.easipay.ManifestMessageHandler">
+        <property name="requestUrl" value="${remote.easipay.manifest.url}"/>
+    </bean>
+    <bean id="waybillMessageHandler" class="com.ceair.ceb.messaging.handler.easipay.WaybillMessageHandler">
+        <property name="requestUrl" value="${remote.easipay.waybill.url}"/>
+    </bean>
+    <bean id="deliveryMessageHandler" class="com.ceair.ceb.messaging.handler.easipay.DeliveryMessageHandler">
+        <property name="requestUrl" value="${remote.easipay.delivery.url}"/>
+    </bean>
+    <!-- 国检舱单 -->
+    <bean id="gjManifestMessageHandler" class="com.ceair.ceb.messaging.handler.easipass.GJManifestMessageHandler"/>
+    <!-- 国检报单-->
+    <bean id="gjDeclarationMessageHandler" class="com.ceair.ceb.messaging.handler.easipass.GJDeclarationMessageHandler"/>
+    <!-- 快件预报-->
+    <bean id="expressMessageHandler" class="com.ceair.ceb.messaging.handler.easipass.ExpressMessageHandler"/>
+    <!-- 确认到货 -->
+    <bean id="expressEntMessageHandler" class="com.ceair.ceb.messaging.handler.easipass.ExpressEntMessageHandler"/>
+
+    <!-- 商品备案 -->
+    <bean id="cargoMessageHandler" class="com.ceair.ceb.messaging.handler.easipay.CargoMessageHandler">
+        <property name="requestUrl" value="${remote.easipay.cargo.url}"/>
+    </bean>
+    <!-- 订单备案 -->
+    <bean id="orderMessageHandler" class="com.ceair.ceb.messaging.handler.easipay.OrderMessageHandler">
+        <property name="requestUrl" value="${remote.easipay.order.url}"/>
+    </bean>
+    <!-- 进境申报查询 -->
+    <bean id="gccdataJaxwsClient" class="com.ceair.ceb.wsclient.gccdata.GCCDataJaxWsClient">
+        <property name="wsdlUrl" value="${remote.easipay.gccdata.wsdl}"/>
+        <property name="endpointAddress" value="${remote.easipay.gccdata.endpoint}"/>
+    </bean>
+
+    <!-- nCargo AWB 查询接口 -->
+    <bean id="nCargoAWBWsClient" class="org.springframework.remoting.jaxws.JaxWsPortProxyFactoryBean">
+        <property name="serviceInterface" value="com.ceair.ceb.jaxws.client.fob.IAWB"/>
+        <property name="wsdlDocumentUrl" value="${remote.ncargo.awb.wsdlUrl}"/>
+        <property name="namespaceUri" value="http://tempuri.org/"/>
+        <property name="serviceName" value="AWBService"/>
+        <property name="portName" value="BasicHttpBinding_IAWB"/>
+        <property name="endpointAddress" value="${remote.ncargo.awb.endpointAddress}"/>
+        <property name="lookupServiceOnStartup" value="false"/>
+        <!-- timeout设置 -->
+        <property name="customProperties" ref="jaxwsCustomProperties"></property>
+    </bean>
+    <util:map id="jaxwsCustomProperties">
+        <entry key="com.sun.xml.ws.request.timeout">
+            <value type="java.lang.Integer">15000</value>
+        </entry>
+        <entry key="com.sun.xml.ws.connect.timeout">
+            <value type="java.lang.Integer">3000</value>
+        </entry>
+    </util:map>
+
+    <bean id="velocityTemplateEngine" class="framework.template.velocity.VelocityTemplateEngine" />
+</beans>

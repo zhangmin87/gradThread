@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- Email -->
+    <bean id="mailService" class="framework.mail.spring.DefaultMailService">
+        <constructor-arg>
+            <bean class="org.springframework.mail.javamail.JavaMailSenderImpl">
+                <property name="username" value="${mail.username}" />
+                <property name="password" value="${mail.password}" />
+                <property name="javaMailProperties">
+                    <props>
+                        <prop key="mail.smtp.host">${mail.smtp.host}</prop>
+                        <prop key="mail.smtp.auth">${mail.smtp.auth}</prop>
+                    </props>
+                </property>
+            </bean>
+        </constructor-arg>
+        <property name="defaultSimpleMailMessage">
+            <bean class="org.springframework.mail.SimpleMailMessage">
+                <property name="from" value="${mail.from}" />
+            </bean>
+        </property>
+    </bean>
+
+    <!-- Email通知 -->
+    <bean id="EMailMonitorNoticer" class="framework.monitor.noticer.support.EMailMonitorNoticer">
+        <property name="mailService" ref="mailService"/>
+        <property name="originalSimpleMailMessage">
+            <bean class="framework.mail.spring.SimpleMailMessageExtension">
+                <property name="tos" value="${mail.to}"/>
+                <property name="ccs" value="${mail.cc}"/>
+                <property name="subject" value="${mail.subject}"/>
+            </bean>
+        </property>
+    </bean>
+
+    <!-- 日志监控 -->
+    <bean id="ErrorLogMonitor" class="framework.monitor.error.ErrorLogMonitor">
+    </bean>
+    <!-- Email监控 -->
+    <bean id="ErrorQueuedMonitor" class="framework.monitor.error.ErrorQueuedMonitor">
+        <property name="periodMonitorQueue" value="300"></property>
+        <property name="scheduledExecutorService" ref="scheduledExecutorService"/>
+        <property name="monitorNoticers">
+            <list>
+                <ref bean="EMailMonitorNoticer"/>
+            </list>
+        </property>
+    </bean>
+
+    <!-- 异常监控拦截器 -->
+    <bean id="ErrorMonitorMethodInterceptor" class="framework.monitor.error.interceptor.ErrorMonitorMethodInterceptor">
+        <property name="errorMonitor" ref="throwableCompositeMonitor"></property>
+    </bean>
+    <!-- 异常监控 -->
+    <bean id="throwableCompositeMonitor" class="framework.monitor.CompositeMonitor">
+        <constructor-arg>
+            <list>
+                <ref bean="ErrorLogMonitor"/>
+                <ref bean="ErrorQueuedMonitor"/>
+            </list>
+        </constructor-arg>
+    </bean>
+</beans>

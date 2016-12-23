@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:cache="http://www.springframework.org/schema/cache"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache.xsd">
+
+    <cache:annotation-driven cache-manager="cacheManager" />
+
+    <!-- Redis配置 -->
+    <!-- sentinel机制下的Redis配置 -->
+    <bean id="redisSentinelConfiguration" class="org.springframework.data.redis.connection.RedisSentinelConfiguration">
+        <property name="master">
+            <bean class="org.springframework.data.redis.connection.RedisNode">
+                <property name="name" value="${redis.mymaster.name}"/>
+            </bean>
+        </property>
+        <property name="sentinels">
+            <set>
+                <bean class="org.springframework.data.redis.connection.RedisNode">
+                    <constructor-arg value="${redis.mymaster.1.host}"/>
+                    <constructor-arg value="${redis.mymaster.1.port}"/>
+                </bean>
+                <bean class="org.springframework.data.redis.connection.RedisNode">
+                    <constructor-arg value="${redis.mymaster.2.host}"/>
+                    <constructor-arg value="${redis.mymaster.2.port}"/>
+                </bean>
+            </set>
+        </property>
+    </bean>
+    <!-- Jedis连接池配置 -->
+    <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
+        <property name="maxTotal" value="20"/>
+        <property name="maxIdle" value="5"/>
+        <property name="maxWaitMillis" value="1000"/>
+        <property name="testOnBorrow" value="true"/>
+    </bean>
+    <!-- Redis连接工厂 -->
+    <bean id="jedisConntectionFacatory" class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory">
+        <!-- Sentinel机制 -->
+        <constructor-arg ref="redisSentinelConfiguration"></constructor-arg>
+        <constructor-arg ref="jedisPoolConfig"></constructor-arg>
+        <property name="password" value="${redis.mymaster.password}"/>
+    </bean>
+    <!-- Redis Template -->
+    <bean id="redisTemplate" class="org.springframework.data.redis.core.RedisTemplate">
+        <property name="connectionFactory" ref="jedisConntectionFacatory"/>
+        <property name="defaultSerializer" >
+            <bean class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer"></bean>
+        </property>
+        <property name="keySerializer">
+            <bean class="org.springframework.data.redis.serializer.StringRedisSerializer"></bean>
+        </property>
+    </bean>
+
+    <!-- 缓存设置 -->
+    <!-- 应用端存放用户信息的缓存 （可以通过SSO服务器授权的PT获取用户信息） -->
+    <bean id="userCache" class="com.ceair.framework.cache.RedisExtensionalCache">
+        <constructor-arg value="userCache"/>
+        <constructor-arg value="userCache:"/>
+        <constructor-arg ref="redisTemplate"/>
+        <constructor-arg value="3600"/>
+    </bean>
+    <!-- 数据字典的缓存（60分钟过期） -->
+    <bean id="dictCache" class="com.ceair.framework.cache.RedisExtensionalCache">
+        <constructor-arg value="dictCache"/>
+        <constructor-arg value="dictCache:"/>
+        <constructor-arg ref="redisTemplate"/>
+        <constructor-arg value="3600"/>
+    </bean>
+    <!-- 缓存管理器 -->
+    <bean id="cacheManager" class="org.springframework.cache.support.SimpleCacheManager">
+        <property name="caches">
+            <set>
+                <ref bean="dictCache"/>
+            </set>
+        </property>
+    </bean>
+</beans>
