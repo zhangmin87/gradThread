@@ -9,5 +9,5 @@ public class Run {
         mythread.start();
         Thread.sleep(2000);
         mythread.interrupt();
-    }
+}
 }
