@@ -13,10 +13,10 @@ public class Run {
         MyThread2 myThread2=new MyThread2(task);
         myThread2.start();
         try{
-            Thread.sleep(1000);
+            Thread.sleep(10000);
         }catch (InterruptedException e){
             e.printStackTrace();
-        }
+        };
         long beginTime=CommonUtils.beginTime1;
         if(CommonUtils.beginTime2<CommonUtils.beginTime1){
             beginTime=CommonUtils.beginTime2;
